@@ -158,7 +158,7 @@ BTree::Entry BTree::splitNode(Node* node, Node*& rightNode) {
     }
   }
 
-  node->entries.resize(mid);
+  node->entries.erase(node->entries.begin() + mid, node->entries.end());
   if (!node->isLeaf) { node->children.resize(mid + 1); }
 
   splitCount++;
@@ -168,7 +168,7 @@ BTree::Entry BTree::splitNode(Node* node, Node*& rightNode) {
 void BTree::handleOverflow(Node* node, std::vector<std::pair<Node*, int>>& path) {
   int maxEntries = order - 1;
 
-  while (static_cast<int>(node->entries.size() > maxEntries)) {
+  while (static_cast<int>(node->entries.size()) > maxEntries) {
     Node* rightNode = nullptr;
     Entry upEntry = splitNode(node, rightNode);
     
