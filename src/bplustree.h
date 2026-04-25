@@ -14,11 +14,23 @@ private:
 
   struct Node {
     bool isLeaf;
-    std::vector<Entry> entries;
-    std::vector<Node*> children;
-    Node* next;
 
     explicit Node(bool isLeaf);
+    virtual ~Node() = default;
+  };
+
+  struct InternalNode : Node {
+    std::vector<int> keys;
+    std::vector<Node*> children;
+
+    InternalNode();
+  };
+
+  struct LeafNode : Node {
+    std::vector<Entry> entries;
+    LeafNode* next;
+
+    LeafNode();
   };
 
   Node* root;
@@ -29,17 +41,18 @@ private:
   }
 
   // search() helper functions
+  int findIndex(const std::vector<int>& keys, int key) const;
   int findIndex(const std::vector<Entry>& entries, int key) const;
   int search(Node* node, int key) const;
 
   // insert() helper functions
-  Entry splitNode(Node* node, Node*& rightNode);
-  void handleOverflow(Node* node, std::vector<std::pair<Node*, int>>& path);
+  int splitNode(Node* node, Node*& rightNode);
+  void handleOverflow(Node* node, std::vector<std::pair<InternalNode*, int>>& path);
 
   // remove() helper functions
-  void concatenation(Node* parent, int leftIndex);
-  void redistribution(Node* parent, int leftIndex);
-  void handleUnderflow(Node* node, std::vector<std::pair<Node*, int>>& path);
+  void concatenation(InternalNode* parent, int leftIndex);
+  void redistribution(InternalNode* parent, int leftIndex);
+  void handleUnderflow(Node* node, std::vector<std::pair<InternalNode*, int>>& path);
 
 public:
   explicit BPlusTree(int order);
