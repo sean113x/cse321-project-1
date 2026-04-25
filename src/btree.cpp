@@ -170,7 +170,7 @@ void BTree::handleOverflow(Node* node, std::vector<std::pair<Node*, int>>& path)
     Node* rightNode = nullptr;
     Entry upEntry = splitNode(node, rightNode);
     
-    if (path.empty()) {
+    if (path.empty()) { // If the root node overflows, split it into two nodes.
       root = new Node(false);
       
       root->entries.push_back(upEntry);
