@@ -1,10 +1,10 @@
 #pragma once
 
 #include "index-tree.h"
-#include <vector>
 #include <utility>
+#include <vector>
 
-class BStarTree : public IndexTree {
+class BPlusTree : public IndexTree {
 private:
   struct Entry {
     int key;
@@ -16,6 +16,7 @@ private:
     bool isLeaf;
     std::vector<Entry> entries;
     std::vector<Node*> children;
+    Node* next;
 
     explicit Node(bool isLeaf);
   };
@@ -24,11 +25,7 @@ private:
 
   // capacity helper function
   int minEntries() const override {
-    return (2 * maxEntries()) / 3;
-  }
-
-  int rootMaxEntries() const {
-    return 2 * minEntries();
+    return (order + 1) / 2 - 1;
   }
 
   // search() helper functions
@@ -36,19 +33,17 @@ private:
   int search(Node* node, int key) const;
 
   // insert() helper functions
-  void splitNode(Node* parent, int leftIndex);
-  bool redistributeOverflow(Node* parent, int childIndex);
+  Entry splitNode(Node* node, Node*& rightNode);
   void handleOverflow(Node* node, std::vector<std::pair<Node*, int>>& path);
 
   // remove() helper functions
-  void concatenation(Node* parent, int childIndex);
-  bool redistribution2(Node* parent, int childIndex);
-  bool redistribution3(Node* parent, int childIndex);
+  void concatenation(Node* parent, int leftIndex);
+  void redistribution(Node* parent, int leftIndex);
   void handleUnderflow(Node* node, std::vector<std::pair<Node*, int>>& path);
 
 public:
-  explicit BStarTree(int order);
-  ~BStarTree() override;
+  explicit BPlusTree(int order);
+  ~BPlusTree() override;
 
   int search(int key) const override;
   void insert(int key, int rid) override;

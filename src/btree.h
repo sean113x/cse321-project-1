@@ -22,7 +22,7 @@ private:
 
   Node* root;
 
-  // capacity helper functions
+  // capacity helper function
   int minEntries() const override {
     return (order + 1) / 2 - 1;
   }
