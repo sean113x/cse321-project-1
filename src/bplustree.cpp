@@ -35,6 +35,7 @@ BPlusTree::~BPlusTree() {
 /*
   Main functions:
   - search(): retrieve the key-rid pair from the leaf node.
+  - search_range(): retrieve the key-rid pairs in the leafs.
   - insert(): insert the key-rid pair into leaf node.
   - remove(): remove the key-rid pair in leaf node.
 */

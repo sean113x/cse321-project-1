@@ -128,6 +128,7 @@ void BTree::remove(int key) {
   - findIndex(): find the first key that is >= the given key.
   - search(): recursively perform search.
   - search_range(): recursively perform in-order range search.
+  - put_values(): put values in the subtree that is <= endKey.
   - splitNode(): split the node and return the separator.
   - handleOverflow(): handle the overflow by splitting node.
   - concatenation(): merge the child and its right sibling.
@@ -182,19 +183,19 @@ void BTree::search_range(Node *node, int startKey, int endKey,
     index++;
 
     if (!node->isLeaf) {
-      search_range(node->children[index], endKey, rids); // helper
+      put_values(node->children[index], endKey, rids);
     }
   }
 }
 
-void BTree::search_range(Node *node, int endKey, std::vector<int> &rids) const {
+void BTree::put_values(Node *node, int endKey, std::vector<int> &rids) const {
   if (node == nullptr) {
     return;
   }
 
   for (int i = 0; i < static_cast<int>(node->entries.size()); i++) {
     if (!node->isLeaf) {
-      search_range(node->children[i], endKey, rids); // helper
+      put_values(node->children[i], endKey, rids);
     }
 
     if (node->entries[i].key > endKey) {
@@ -205,7 +206,7 @@ void BTree::search_range(Node *node, int endKey, std::vector<int> &rids) const {
   }
 
   if (!node->isLeaf) {
-    search_range(node->children.back(), endKey, rids); // helper
+    put_values(node->children.back(), endKey, rids);
   }
 }
 

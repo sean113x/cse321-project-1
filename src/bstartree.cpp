@@ -28,15 +28,22 @@ BStarTree::~BStarTree() {
 /*
   Main functions: (same as B-tree)
   - search(): retrieve the key-rid pair.
+  - search_range(): retrieve the key-rid pairs in the range.
   - insert(): insert the key-rid pair into leaf node.
   - remove(): remove the key-rid pair.
 */
 
 int BStarTree::search(int key) const { return search(root, key); }
 
-std::vector<int> BStarTree::search_range(int, int) const {
-  // TODO
-  return {};
+std::vector<int> BStarTree::search_range(int startKey, int endKey) const {
+  std::vector<int> rids;
+
+  if (startKey > endKey) {
+    return rids;
+  }
+
+  search_range(root, startKey, endKey, rids);
+  return rids;
 }
 
 void BStarTree::insert(int key, int rid) {
@@ -120,6 +127,8 @@ void BStarTree::remove(int key) {
   Helper functions:
   - findIndex(): find the first key that is >= the given key.
   - search(): recursively perform search.
+  - search_range(): recursively perform in-order range search.
+  - put_values(): put values in the subtree that is <= endKey.
   - splitNode(): split two full sibling nodes into three nodes (2-to-3 split).
   - redistributeOverflow(): redistribute entries with a sibling before
   splitting.
@@ -157,6 +166,52 @@ int BStarTree::search(Node *node, int key) const { // same as B-tree
   }
 
   return search(node->children[index], key);
+}
+
+void BStarTree::search_range(Node *node, int startKey, int endKey,
+                             std::vector<int> &rids) const {
+  if (node == nullptr) {
+    return;
+  }
+
+  int index = findIndex(node->entries, startKey);
+
+  if (!node->isLeaf) {
+    search_range(node->children[index], startKey, endKey, rids);
+  }
+
+  while (index < static_cast<int>(node->entries.size()) &&
+         node->entries[index].key <= endKey) {
+    rids.push_back(node->entries[index].rid);
+    index++;
+
+    if (!node->isLeaf) {
+      put_values(node->children[index], endKey, rids);
+    }
+  }
+}
+
+void BStarTree::put_values(Node *node, int endKey,
+                           std::vector<int> &rids) const {
+  if (node == nullptr) {
+    return;
+  }
+
+  for (int i = 0; i < static_cast<int>(node->entries.size()); i++) {
+    if (!node->isLeaf) {
+      put_values(node->children[i], endKey, rids);
+    }
+
+    if (node->entries[i].key > endKey) {
+      return;
+    }
+
+    rids.push_back(node->entries[i].rid);
+  }
+
+  if (!node->isLeaf) {
+    put_values(node->children.back(), endKey, rids);
+  }
 }
 
 void BStarTree::splitNode(Node *parent, int leftIndex) {

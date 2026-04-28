@@ -31,6 +31,11 @@ private:
   int findIndex(const std::vector<Entry> &entries, int key) const;
   int search(Node *node, int key) const;
 
+  // search_range() helper functions
+  void search_range(Node *node, int startKey, int endKey,
+                    std::vector<int> &rids) const;
+  void put_values(Node *node, int endKey, std::vector<int> &rids) const;
+
   // insert() helper functions
   void splitNode(Node *parent, int leftIndex);
   bool redistributeOverflow(Node *parent, int childIndex);
