@@ -34,6 +34,11 @@ BTree::~BTree() {
 
 int BTree::search(int key) const { return search(root, key); }
 
+std::vector<int> BTree::search_range(int, int) const {
+  // TODO
+  return {};
+}
+
 void BTree::insert(int key, int rid) {
   Entry newEntry(key, rid);
 

@@ -54,6 +54,11 @@ int BPlusTree::search(int key) const {
   return -1;
 }
 
+std::vector<int> BPlusTree::search_range(int, int) const {
+  // TODO
+  return {};
+}
+
 void BPlusTree::insert(int key, int rid) {
   Entry newEntry(key, rid);
 

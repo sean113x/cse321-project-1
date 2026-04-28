@@ -34,6 +34,11 @@ BStarTree::~BStarTree() {
 
 int BStarTree::search(int key) const { return search(root, key); }
 
+std::vector<int> BStarTree::search_range(int, int) const {
+  // TODO
+  return {};
+}
+
 void BStarTree::insert(int key, int rid) {
   Entry newEntry(key, rid);
 

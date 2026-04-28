@@ -47,6 +47,7 @@ public:
   ~BStarTree() override;
 
   int search(int key) const override;
+  std::vector<int> search_range(int startKey, int endKey) const override;
   void insert(int key, int rid) override;
   void remove(int key) override;
 };
