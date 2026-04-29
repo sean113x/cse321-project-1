@@ -31,6 +31,7 @@ BStarTree::~BStarTree() {
   - search_range(): retrieve the key-rid pairs in the range.
   - insert(): insert the key-rid pair into leaf node.
   - remove(): remove the key-rid pair.
+  - getNodeUtilization(): calculate average node utilization.
 */
 
 int BStarTree::search(int key) const { return search(root, key); }
@@ -52,6 +53,8 @@ void BStarTree::insert(int key, int rid) {
   if (root == nullptr) {
     root = new Node(true);
     root->entries.push_back(newEntry);
+    numNode++;
+    numEntry++;
     return;
   }
 
@@ -79,6 +82,7 @@ void BStarTree::insert(int key, int rid) {
   }
 
   current->entries.insert(current->entries.begin() + index, newEntry);
+  numEntry++;
   handleOverflow(current, path);
 }
 
@@ -110,6 +114,7 @@ void BStarTree::remove(int key) {
       }
 
       current->entries.erase(current->entries.begin() + index);
+      numEntry--;
       handleUnderflow(current, path);
       return;
     }
@@ -121,6 +126,15 @@ void BStarTree::remove(int key) {
     path.push_back({current, index});
     current = current->children[index];
   }
+}
+
+double BStarTree::getNodeUtilization() const {
+  if (numNode == 0) {
+    return 0.0;
+  }
+
+  int totalCapacity = rootMaxEntries() + (numNode - 1) * maxEntries();
+  return 100.0 * numEntry / totalCapacity;
 }
 
 /*
@@ -218,6 +232,7 @@ void BStarTree::splitNode(Node *parent, int leftIndex) {
   Node *left = parent->children[leftIndex];
   Node *right = parent->children[leftIndex + 1];
   Node *middle = new Node(left->isLeaf);
+  numNode++;
 
   std::vector<Entry> entries = left->entries;
   entries.push_back(
@@ -264,6 +279,7 @@ void BStarTree::handleOverflow(Node *node,
       int mid = static_cast<int>(node->entries.size()) / 2;
       Entry upEntry = node->entries[mid];
       Node *rightNode = new Node(node->isLeaf);
+      numNode++;
 
       rightNode->entries.assign(node->entries.begin() + mid + 1,
                                 node->entries.end());
@@ -276,6 +292,7 @@ void BStarTree::handleOverflow(Node *node,
       }
 
       root = new Node(false);
+      numNode++;
       root->entries = {upEntry};
       root->children = {node, rightNode};
 
@@ -385,6 +402,7 @@ void BStarTree::concatenation(Node *parent, int childIndex) {
     parent->entries.erase(parent->entries.begin() + leftIndex);
     parent->children.erase(parent->children.begin() + leftIndex + 1);
     delete right;
+    numNode--;
     return;
   }
 
@@ -428,6 +446,7 @@ void BStarTree::concatenation(Node *parent, int childIndex) {
   parent->entries.erase(parent->entries.begin() + startIndex + 1);
   parent->children.erase(parent->children.begin() + startIndex + 2);
   delete third;
+  numNode--;
 }
 
 bool BStarTree::redistribution2(Node *parent, int childIndex) {
@@ -580,5 +599,6 @@ void BStarTree::handleUnderflow(Node *node,
     }
 
     delete oldRoot;
+    numNode--;
   }
 }

@@ -52,6 +52,8 @@ void BTree::insert(int key, int rid) {
   if (root == nullptr) {
     root = new Node(true);
     root->entries.push_back(newEntry);
+    numNode++;
+    numEntry++;
     return;
   }
 
@@ -79,6 +81,7 @@ void BTree::insert(int key, int rid) {
   }
 
   current->entries.insert(current->entries.begin() + index, newEntry);
+  numEntry++;
   handleOverflow(current, path);
 }
 
@@ -110,6 +113,7 @@ void BTree::remove(int key) {
       }
 
       current->entries.erase(current->entries.begin() + index);
+      numEntry--;
       handleUnderflow(current, path);
       return;
     }
@@ -216,6 +220,7 @@ BTree::Entry BTree::splitNode(Node *node, Node *&rightNode) {
 
   Entry upEntry = node->entries[mid];
   rightNode = new Node(node->isLeaf);
+  numNode++;
 
   for (int i = mid + 1; i < entryCount; i++) {
     rightNode->entries.push_back(node->entries[i]);
@@ -246,6 +251,7 @@ void BTree::handleOverflow(Node *node,
 
     if (path.empty()) { // If the root node overflows, split it into two nodes.
       root = new Node(false);
+      numNode++;
 
       root->entries.push_back(upEntry);
       root->children.push_back(node);
@@ -283,6 +289,7 @@ void BTree::concatenation(Node *parent, int leftIndex) {
   parent->children.erase(parent->children.begin() + leftIndex + 1);
 
   delete rightChild;
+  numNode--;
 }
 
 void BTree::redistribution(Node *parent, int leftIndex) {
@@ -355,5 +362,6 @@ void BTree::handleUnderflow(Node *node,
     }
 
     delete oldRoot;
+    numNode--;
   }
 }
