@@ -28,7 +28,7 @@ BStarTree::~BStarTree() {
 /*
   Main functions: (same as B-tree)
   - search(): retrieve the key-rid pair.
-  - search_range(): retrieve the key-rid pairs in the range.
+  - range_query(): retrieve the key-rid pairs in the range.
   - insert(): insert the key-rid pair into leaf node.
   - remove(): remove the key-rid pair.
   - getNodeUtilization(): calculate average node utilization.
@@ -36,14 +36,14 @@ BStarTree::~BStarTree() {
 
 int BStarTree::search(int key) const { return search(root, key); }
 
-std::vector<int> BStarTree::search_range(int startKey, int endKey) const {
+std::vector<int> BStarTree::range_query(int startKey, int endKey) const {
   std::vector<int> rids;
 
   if (startKey > endKey) {
     return rids;
   }
 
-  search_range(root, startKey, endKey, rids);
+  range_query(root, startKey, endKey, rids);
   return rids;
 }
 
@@ -141,7 +141,7 @@ double BStarTree::getNodeUtilization() const {
   Helper functions:
   - findIndex(): find the first key that is >= the given key.
   - search(): recursively perform search.
-  - search_range(): recursively perform in-order range search.
+  - range_query(): recursively perform in-order range search.
   - put_values(): put values in the subtree that is <= endKey.
   - splitNode(): split two full sibling nodes into three nodes (2-to-3 split).
   - redistributeOverflow(): redistribute entries with a sibling before
@@ -182,8 +182,8 @@ int BStarTree::search(Node *node, int key) const { // same as B-tree
   return search(node->children[index], key);
 }
 
-void BStarTree::search_range(Node *node, int startKey, int endKey,
-                             std::vector<int> &rids) const {
+void BStarTree::range_query(Node *node, int startKey, int endKey,
+                            std::vector<int> &rids) const {
   if (node == nullptr) {
     return;
   }
@@ -191,7 +191,7 @@ void BStarTree::search_range(Node *node, int startKey, int endKey,
   int index = findIndex(node->entries, startKey);
 
   if (!node->isLeaf) {
-    search_range(node->children[index], startKey, endKey, rids);
+    range_query(node->children[index], startKey, endKey, rids);
   }
 
   while (index < static_cast<int>(node->entries.size()) &&

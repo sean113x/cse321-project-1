@@ -35,7 +35,7 @@ BPlusTree::~BPlusTree() {
 /*
   Main functions:
   - search(): retrieve the key-rid pair from the leaf node.
-  - search_range(): retrieve the key-rid pairs in the leafs.
+  - range_query(): retrieve the key-rid pairs in the leafs.
   - insert(): insert the key-rid pair into leaf node.
   - remove(): remove the key-rid pair in leaf node.
 */
@@ -55,7 +55,7 @@ int BPlusTree::search(int key) const {
   return -1;
 }
 
-std::vector<int> BPlusTree::search_range(int startKey, int endKey) const {
+std::vector<int> BPlusTree::range_query(int startKey, int endKey) const {
   std::vector<int> rids;
 
   if (startKey > endKey) {

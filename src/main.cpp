@@ -91,7 +91,7 @@ int runTestMode() {
         continue;
       }
 
-      std::vector<int> rids = tree->search_range(startKey, endKey);
+      std::vector<int> rids = tree->range_query(startKey, endKey);
 
       if (rids.empty()) {
         std::cout << "No records found\n";

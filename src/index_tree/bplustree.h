@@ -42,7 +42,7 @@ private:
   int findIndex(const std::vector<int> &keys, int key) const;
   int findIndex(const std::vector<Entry> &entries, int key) const;
 
-  // search_range() helper functions
+  // range_query() helper functions
   std::pair<LeafNode *, int> search(Node *node, int key) const;
 
   // insert() helper functions
@@ -61,7 +61,7 @@ public:
   ~BPlusTree() override;
 
   int search(int key) const override;
-  std::vector<int> search_range(int startKey, int endKey) const override;
+  std::vector<int> range_query(int startKey, int endKey) const override;
   void insert(int key, int rid) override;
   void remove(int key) override;
 };

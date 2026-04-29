@@ -28,21 +28,21 @@ BTree::~BTree() {
 /*
   Main functions:
   - search(): retrieve the key-rid pair.
-  - search_range(): retrieve the key-rid pairs in the range.
+  - range_query(): retrieve the key-rid pairs in the range.
   - insert(): insert the key-rid pair into leaf node.
   - remove(): remove the key-rid pair.
 */
 
 int BTree::search(int key) const { return search(root, key); }
 
-std::vector<int> BTree::search_range(int startKey, int endKey) const {
+std::vector<int> BTree::range_query(int startKey, int endKey) const {
   std::vector<int> rids;
 
   if (startKey > endKey) {
     return rids;
   }
 
-  search_range(root, startKey, endKey, rids);
+  range_query(root, startKey, endKey, rids);
   return rids;
 }
 
@@ -131,7 +131,7 @@ void BTree::remove(int key) {
   Helper functions:
   - findIndex(): find the first key that is >= the given key.
   - search(): recursively perform search.
-  - search_range(): recursively perform in-order range search.
+  - range_query(): recursively perform in-order range search.
   - put_values(): put values in the subtree that is <= endKey.
   - splitNode(): split the node and return the separator.
   - handleOverflow(): handle the overflow by splitting node.
@@ -169,8 +169,8 @@ int BTree::search(Node *node, int key) const {
   return search(node->children[index], key);
 }
 
-void BTree::search_range(Node *node, int startKey, int endKey,
-                         std::vector<int> &rids) const {
+void BTree::range_query(Node *node, int startKey, int endKey,
+                        std::vector<int> &rids) const {
   if (node == nullptr) {
     return;
   }
@@ -178,7 +178,7 @@ void BTree::search_range(Node *node, int startKey, int endKey,
   int index = findIndex(node->entries, startKey);
 
   if (!node->isLeaf) {
-    search_range(node->children[index], startKey, endKey, rids);
+    range_query(node->children[index], startKey, endKey, rids);
   }
 
   while (index < static_cast<int>(node->entries.size()) &&

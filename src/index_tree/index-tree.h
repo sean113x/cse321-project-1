@@ -20,7 +20,7 @@ public:
   virtual ~IndexTree() = default;
 
   virtual int search(int key) const = 0;
-  virtual std::vector<int> search_range(int startKey, int endKey) const = 0;
+  virtual std::vector<int> range_query(int startKey, int endKey) const = 0;
   virtual void insert(int key, int rid) = 0;
   virtual void remove(int key) = 0;
 

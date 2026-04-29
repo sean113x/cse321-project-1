@@ -29,9 +29,9 @@ private:
   int findIndex(const std::vector<Entry> &entries, int key) const;
   int search(Node *node, int key) const;
 
-  // search_range() helper functions
-  void search_range(Node *node, int startKey, int endKey,
-                    std::vector<int> &rids) const;
+  // range_query() helper functions
+  void range_query(Node *node, int startKey, int endKey,
+                   std::vector<int> &rids) const;
   void put_values(Node *node, int endKey, std::vector<int> &rids) const;
 
   // insert() helper functions
@@ -48,7 +48,7 @@ public:
   ~BTree() override;
 
   int search(int key) const override;
-  std::vector<int> search_range(int startKey, int endKey) const override;
+  std::vector<int> range_query(int startKey, int endKey) const override;
   void insert(int key, int rid) override;
   void remove(int key) override;
 };
