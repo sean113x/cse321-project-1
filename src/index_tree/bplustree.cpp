@@ -177,26 +177,6 @@ void BPlusTree::remove(int key) {
   leaf->entries.erase(leaf->entries.begin() + index);
   numEntry--;
   handleUnderflow(leaf, path);
-
-  auto refreshSeparators = [](auto &&self, Node *node) -> int {
-    if (node->isLeaf) {
-      auto *leaf = static_cast<LeafNode *>(node);
-      return leaf->entries.front().key;
-    }
-
-    auto *internal = static_cast<InternalNode *>(node);
-    int firstKey = self(self, internal->children.front());
-
-    for (int i = 1; i < static_cast<int>(internal->children.size()); ++i) {
-      internal->keys[i - 1] = self(self, internal->children[i]);
-    }
-
-    return firstKey;
-  };
-
-  if (root != nullptr) {
-    refreshSeparators(refreshSeparators, root);
-  }
 }
 
 /*
