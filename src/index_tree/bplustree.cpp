@@ -10,7 +10,8 @@ BPlusTree::InternalNode::InternalNode() : Node(false) {}
 
 BPlusTree::LeafNode::LeafNode() : Node(true), next(nullptr) {}
 
-BPlusTree::BPlusTree(int order) : IndexTree(order), root(nullptr) {
+BPlusTree::BPlusTree(int order)
+    : IndexTree(order), root(nullptr), numInternalKey(0) {
   if (order < 3) {
     throw std::invalid_argument("BPlusTree order must be at least 3.");
   }
@@ -39,6 +40,8 @@ BPlusTree::~BPlusTree() {
   - insert(): insert the key-rid pair into leaf node.
   - remove(): remove the key-rid pair in leaf node.
 */
+
+int BPlusTree::minEntriesLeaf() const { return (maxEntries() + 1) / 2; }
 
 int BPlusTree::search(int key) const {
   auto [leaf, index] = search(root, key);
@@ -75,6 +78,55 @@ int BPlusTree::calculateHeight() const {
   }
 
   return height;
+}
+
+bool BPlusTree::isUnderfull(Node *node) const {
+  if (node == root) {
+    return false;
+  }
+
+  if (node->isLeaf) {
+    auto *leaf = static_cast<LeafNode *>(node);
+    return static_cast<int>(leaf->entries.size()) < minEntriesLeaf();
+  }
+
+  auto *internal = static_cast<InternalNode *>(node);
+  return static_cast<int>(internal->keys.size()) < minEntries();
+}
+
+double BPlusTree::overallNodeUtilization() const {
+  if (numNode == 0) {
+    return 0.0;
+  }
+
+  return static_cast<double>(numEntry + numInternalKey) /
+         static_cast<double>(numNode * maxEntries());
+}
+
+double BPlusTree::getLeafNodeUtilization() const {
+  if (root == nullptr) {
+    return 0.0;
+  }
+
+  Node *current = root;
+  while (!current->isLeaf) {
+    auto *internal = static_cast<InternalNode *>(current);
+    current = internal->children.front();
+  }
+
+  int numLeafNode = 0;
+  auto *leaf = static_cast<LeafNode *>(current);
+
+  while (leaf != nullptr) {
+    numLeafNode++;
+    leaf = leaf->next;
+  }
+
+  return 100.0 * numEntry / (numLeafNode * maxEntries());
+}
+
+double BPlusTree::getNodeUtilization() const {
+  return 100.0 * overallNodeUtilization();
 }
 
 std::vector<int> BPlusTree::range_query(int startKey, int endKey) const {
@@ -176,6 +228,14 @@ void BPlusTree::remove(int key) {
 
   leaf->entries.erase(leaf->entries.begin() + index);
   numEntry--;
+
+  if (index == 0 && !leaf->entries.empty() && !path.empty()) {
+    auto [parent, childIndex] = path.back();
+    if (childIndex > 0) {
+      parent->keys[childIndex - 1] = leaf->entries.front().key;
+    }
+  }
+
   handleUnderflow(leaf, path);
 }
 
@@ -249,7 +309,7 @@ int BPlusTree::splitNode(Node *node, Node *&rightNode) {
     rightNode = rightLeaf;
 
     splitCount++;
-    return rightLeaf->entries.front().key; // copy up! not move up
+    return rightLeaf->entries.front().key; // leaf split uses copy-up
   }
 
   auto *internal = static_cast<InternalNode *>(node);
@@ -267,9 +327,8 @@ int BPlusTree::splitNode(Node *node, Node *&rightNode) {
   internal->children.resize(mid + 1);
   rightNode = rightInternal;
 
-  numEntry--; // internal split moves the separator up.
   splitCount++;
-  return upKey;
+  return upKey; // internal split uses move-up
 }
 
 void BPlusTree::handleOverflow(
@@ -283,6 +342,7 @@ void BPlusTree::handleOverflow(
   };
 
   while (entryCount(node) > maxEntries()) {
+    bool splitWasLeaf = node->isLeaf;
     Node *rightNode = nullptr;
     int upKey = splitNode(node, rightNode);
 
@@ -293,7 +353,9 @@ void BPlusTree::handleOverflow(
       newRoot->children.push_back(node);
       newRoot->children.push_back(rightNode);
       root = newRoot;
-      numEntry++;
+      if (splitWasLeaf) {
+        numInternalKey++;
+      }
       return;
     }
 
@@ -303,7 +365,9 @@ void BPlusTree::handleOverflow(
     parent->keys.insert(parent->keys.begin() + childIndex, upKey);
     parent->children.insert(parent->children.begin() + childIndex + 1,
                             rightNode);
-    numEntry++;
+    if (splitWasLeaf) {
+      numInternalKey++;
+    }
     node = parent;
   }
 }
@@ -324,11 +388,12 @@ void BPlusTree::concatenation(InternalNode *parent, int leftIndex) {
                              rightLeaf->entries.begin(),
                              rightLeaf->entries.end());
     leftLeaf->next = rightLeaf->next;
-    numEntry--;
+    numInternalKey--; // leaf merge removes a parent separator
   } else {
     auto *leftInternal = static_cast<InternalNode *>(left);
     auto *rightInternal = static_cast<InternalNode *>(right);
 
+    // Internal merge moves the parent separator down into the merged node.
     leftInternal->keys.push_back(separator);
     leftInternal->keys.insert(leftInternal->keys.end(),
                               rightInternal->keys.begin(),
@@ -390,23 +455,11 @@ void BPlusTree::redistribution(InternalNode *parent, int leftIndex) {
 
 void BPlusTree::handleUnderflow(
     Node *node, std::vector<std::pair<InternalNode *, int>> &path) {
-  auto entryCount = [](Node *current) {
-    if (current->isLeaf) {
-      return static_cast<int>(static_cast<LeafNode *>(current)->entries.size());
+  while (node != root && isUnderfull(node)) {
+    if (path.empty()) {
+      break;
     }
 
-    return static_cast<int>(static_cast<InternalNode *>(current)->keys.size());
-  };
-
-  auto minEntryCount = [this](Node *current) {
-    if (current->isLeaf) {
-      return (maxEntries() + 1) / 2;
-    }
-
-    return minEntries();
-  };
-
-  while (node != root && entryCount(node) < minEntryCount(node)) {
     auto [parent, childIndex] = path.back();
     path.pop_back();
 
@@ -418,17 +471,32 @@ void BPlusTree::handleUnderflow(
     Node *left = parent->children[leftIndex];
     Node *right = parent->children[leftIndex + 1];
 
-    int total = entryCount(left) + entryCount(right);
-    if (!left->isLeaf) {
-      ++total;
-    }
+    if (left->isLeaf) {
+      auto *leftLeaf = static_cast<LeafNode *>(left);
+      auto *rightLeaf = static_cast<LeafNode *>(right);
+      int total = static_cast<int>(leftLeaf->entries.size()) +
+                  static_cast<int>(rightLeaf->entries.size());
 
-    if (total <= maxEntries()) {
-      concatenation(parent, leftIndex);
-      node = parent;
+      if (total <= maxEntries()) {
+        concatenation(parent, leftIndex);
+        node = parent;
+      } else {
+        redistribution(parent, leftIndex);
+        return;
+      }
     } else {
-      redistribution(parent, leftIndex);
-      return;
+      auto *leftInternal = static_cast<InternalNode *>(left);
+      auto *rightInternal = static_cast<InternalNode *>(right);
+      int total = static_cast<int>(leftInternal->keys.size()) + 1 +
+                  static_cast<int>(rightInternal->keys.size());
+
+      if (total <= maxEntries()) {
+        concatenation(parent, leftIndex);
+        node = parent;
+      } else {
+        redistribution(parent, leftIndex);
+        return;
+      }
     }
   }
 

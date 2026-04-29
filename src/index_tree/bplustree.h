@@ -34,10 +34,15 @@ private:
   };
 
   Node *root;
+  int numInternalKey; // Internal separator keys
 
   // capacity helper function
-  int minEntries() const override { return (order + 1) / 2 - 1; }
+  int minEntries() const override {
+    return (order + 1) / 2 - 1;
+  } // internal nodes
+  int minEntriesLeaf() const; // leaf nodes
   int calculateHeight() const override;
+  bool isUnderfull(Node *node) const;
 
   // search() helper functions
   int findIndex(const std::vector<int> &keys, int key) const;
@@ -65,4 +70,9 @@ public:
   std::vector<int> range_query(int startKey, int endKey) const override;
   void insert(int key, int rid) override;
   void remove(int key) override;
+  int getNumInternalKey() const { return numInternalKey; }
+  // Uses both leaf data entries and internal separator keys.
+  double overallNodeUtilization() const;
+  double getLeafNodeUtilization() const;
+  double getNodeUtilization() const override;
 };
