@@ -76,6 +76,7 @@ void BTree::insert(int key, int rid) {
 
   std::vector<std::pair<Node *, int>> path;
   Node *current = root;
+  countNodeRead();
 
   while (!current->isLeaf) {
     int index = findIndex(current->entries, key);
@@ -87,6 +88,7 @@ void BTree::insert(int key, int rid) {
     }
     path.push_back({current, index});
     current = current->children[index];
+    countNodeRead();
   }
 
   int index = findIndex(current->entries, key);
@@ -109,6 +111,7 @@ void BTree::remove(int key) {
 
   std::vector<std::pair<Node *, int>> path;
   Node *current = root;
+  countNodeRead();
 
   while (true) {
     int index = findIndex(current->entries, key);
@@ -118,10 +121,12 @@ void BTree::remove(int key) {
       if (!current->isLeaf) {
         Node *successor = current->children[index + 1];
         path.push_back({current, index + 1});
+        countNodeRead();
 
         while (!successor->isLeaf) {
           path.push_back({successor, 0});
           successor = successor->children[0];
+          countNodeRead();
         }
 
         current->entries[index] = successor->entries.front();
@@ -141,6 +146,7 @@ void BTree::remove(int key) {
 
     path.push_back({current, index});
     current = current->children[index];
+    countNodeRead();
   }
 }
 
@@ -172,6 +178,9 @@ int BTree::search(Node *node, int key) const {
   if (node == nullptr) {
     return -1;
   }
+
+  countNodeRead();
+
   int index = findIndex(node->entries, key);
 
   if (index < static_cast<int>(node->entries.size()) &&
@@ -191,6 +200,8 @@ void BTree::range_query(Node *node, int startKey, int endKey,
   if (node == nullptr) {
     return;
   }
+
+  countNodeRead();
 
   int index = findIndex(node->entries, startKey);
 
@@ -213,6 +224,8 @@ void BTree::put_values(Node *node, int endKey, std::vector<int> &rids) const {
   if (node == nullptr) {
     return;
   }
+
+  countNodeRead();
 
   for (int i = 0; i < static_cast<int>(node->entries.size()); i++) {
     if (!node->isLeaf) {
@@ -354,6 +367,7 @@ void BTree::handleUnderflow(Node *node,
                         ? childIndex
                         : childIndex - 1;
 
+    countNodeRead();
     Node *left = parent->children[leftIndex];
     Node *right = parent->children[leftIndex + 1];
 

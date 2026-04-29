@@ -77,6 +77,7 @@ void BStarTree::insert(int key, int rid) {
 
   std::vector<std::pair<Node *, int>> path;
   Node *current = root;
+  countNodeRead();
 
   while (!current->isLeaf) {
     int index = findIndex(current->entries, key);
@@ -88,6 +89,7 @@ void BStarTree::insert(int key, int rid) {
     }
     path.push_back({current, index});
     current = current->children[index];
+    countNodeRead();
   }
 
   int index = findIndex(current->entries, key);
@@ -110,6 +112,7 @@ void BStarTree::remove(int key) {
 
   std::vector<std::pair<Node *, int>> path;
   Node *current = root;
+  countNodeRead();
 
   while (true) {
     int index = findIndex(current->entries, key);
@@ -119,10 +122,12 @@ void BStarTree::remove(int key) {
       if (!current->isLeaf) {
         Node *successor = current->children[index + 1];
         path.push_back({current, index + 1});
+        countNodeRead();
 
         while (!successor->isLeaf) {
           path.push_back({successor, 0});
           successor = successor->children[0];
+          countNodeRead();
         }
 
         current->entries[index] = successor->entries.front();
@@ -142,6 +147,7 @@ void BStarTree::remove(int key) {
 
     path.push_back({current, index});
     current = current->children[index];
+    countNodeRead();
   }
 }
 
@@ -185,6 +191,9 @@ int BStarTree::search(Node *node, int key) const { // same as B-tree
   if (node == nullptr) {
     return -1;
   }
+
+  countNodeRead();
+
   int index = findIndex(node->entries, key);
 
   if (index < static_cast<int>(node->entries.size()) &&
@@ -204,6 +213,8 @@ void BStarTree::range_query(Node *node, int startKey, int endKey,
   if (node == nullptr) {
     return;
   }
+
+  countNodeRead();
 
   int index = findIndex(node->entries, startKey);
 
@@ -227,6 +238,8 @@ void BStarTree::put_values(Node *node, int endKey,
   if (node == nullptr) {
     return;
   }
+
+  countNodeRead();
 
   for (int i = 0; i < static_cast<int>(node->entries.size()); i++) {
     if (!node->isLeaf) {
@@ -594,6 +607,8 @@ void BStarTree::handleUnderflow(Node *node,
          static_cast<int>(node->entries.size()) < minEntries()) {
     auto [parent, childIndex] = path.back();
     path.pop_back();
+
+    countNodeRead();
 
     if (redistribution2(parent, childIndex)) {
       return;

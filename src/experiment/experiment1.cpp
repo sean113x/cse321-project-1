@@ -29,10 +29,22 @@ struct TreeSpec {
   int type;
 };
 
+struct Measurement {
+  double executionTimeMs = 0.0;
+  long long nodeReadCount = 0;
+  long long sequentialLeafReadCount = 0;
+  double simulatedSsdCostMs = 0.0;
+  double totalTimeWithSsdMs = 0.0;
+};
+
 struct RunState {
   const TreeSpec *spec;
   std::vector<double> executionTimes;
+  std::vector<double> simulatedSsdCosts;
+  std::vector<double> totalTimesWithSsd;
   std::unique_ptr<IndexTree> tree;
+  long long nodeReadCount = 0;
+  long long sequentialLeafReadCount = 0;
   double avg = 0.0;
   double sd = 0.0;
   double rsd = 0.0;
@@ -81,14 +93,22 @@ double stddev(const std::vector<double> &values, double avg) {
              : std::sqrt(sum / static_cast<double>(values.size() - 1));
 }
 
-long long buildTree(IndexTree &tree, const std::vector<int> &keys) {
+Measurement buildTree(IndexTree &tree, const std::vector<int> &keys) {
+  tree.resetNodeReadCount();
   auto start = std::chrono::steady_clock::now(); // start timer
   for (int rid = 0; rid < static_cast<int>(keys.size()); ++rid) {
     tree.insert(keys[rid], rid);
   }
   auto end = std::chrono::steady_clock::now(); // end timer
-  return std::chrono::duration_cast<std::chrono::nanoseconds>(end - start)
-      .count();
+  Measurement measurement;
+  measurement.executionTimeMs =
+      std::chrono::duration<double, std::milli>(end - start).count();
+  measurement.nodeReadCount = tree.getNodeReadCount();
+  measurement.sequentialLeafReadCount = tree.getSequentialLeafReadCount();
+  measurement.simulatedSsdCostMs = tree.getSimulatedSsdCostMs();
+  measurement.totalTimeWithSsdMs =
+      measurement.executionTimeMs + measurement.simulatedSsdCostMs;
+  return measurement;
 }
 
 void createResultsDirectory() {
@@ -116,11 +136,16 @@ int runExperiment1() {
   runFile << std::setprecision(12);
   summaryFile << std::setprecision(12);
 
-  runFile << "tree,order,run,execution_time_ns\n";
+  runFile << "tree,order,run,execution_time_ms,node_read_count,"
+          << "sequential_leaf_read_count,simulated_ssd_cost_ms,"
+          << "total_time_with_ssd_ms\n";
   summaryFile << "tree,order,records,warmup_runs,measured_runs,"
-              << "mean_execution_time_ns,median_execution_time_ns,"
-              << "stddev_execution_time_ns,rsd,mean_execution_time_ms,"
-              << "median_execution_time_ms,split_count,tree_height,"
+              << "mean_execution_time_ms,median_execution_time_ms,"
+              << "stddev_execution_time_ms,rsd,node_read_count,"
+              << "sequential_leaf_read_count,"
+              << "mean_simulated_ssd_cost_ms,median_simulated_ssd_cost_ms,"
+              << "mean_total_time_with_ssd_ms,median_total_time_with_ssd_ms,"
+              << "split_count,tree_height,"
               << "num_nodes,num_entries,node_utilization\n";
 
   std::cout << "Experiment 1: Insertion & Parameter Tuning\n";
@@ -148,14 +173,22 @@ int runExperiment1() {
         }
 
         state.tree = createTree(state.spec->type, order);
-        long long ns = buildTree(*state.tree, keys);
-        state.executionTimes.push_back(static_cast<double>(ns));
+        Measurement measurement = buildTree(*state.tree, keys);
+        state.executionTimes.push_back(measurement.executionTimeMs);
+        state.nodeReadCount = measurement.nodeReadCount;
+        state.sequentialLeafReadCount = measurement.sequentialLeafReadCount;
+        state.simulatedSsdCosts.push_back(measurement.simulatedSsdCostMs);
+        state.totalTimesWithSsd.push_back(measurement.totalTimeWithSsdMs);
         state.avg = mean(state.executionTimes);
         state.sd = stddev(state.executionTimes, state.avg);
         state.rsd = state.sd / state.avg;
 
-        runFile << state.spec->name << ',' << order << ',' << run << ',' << ns
-                << '\n';
+        runFile << state.spec->name << ',' << order << ',' << run << ','
+                << measurement.executionTimeMs << ','
+                << measurement.nodeReadCount << ','
+                << measurement.sequentialLeafReadCount << ','
+                << measurement.simulatedSsdCostMs << ','
+                << measurement.totalTimeWithSsdMs << '\n';
 
         if (run >= minMeasuredRuns && state.rsd < targetRsd) {
           state.done = true;
@@ -171,14 +204,19 @@ int runExperiment1() {
     }
 
     for (const RunState &state : states) {
-      double meanMs = state.avg / 1000000.0;
       double med = median(state.executionTimes);
-      double medianMs = med / 1000000.0;
+      double meanSsdCost = mean(state.simulatedSsdCosts);
+      double medianSsdCost = median(state.simulatedSsdCosts);
+      double meanTotalWithSsd = mean(state.totalTimesWithSsd);
+      double medianTotalWithSsd = median(state.totalTimesWithSsd);
 
       summaryFile << state.spec->name << ',' << order << ',' << keys.size()
                   << ',' << warmupRuns << ',' << state.executionTimes.size()
                   << ',' << state.avg << ',' << med << ',' << state.sd << ','
-                  << state.rsd << ',' << meanMs << ',' << medianMs << ','
+                  << state.rsd << ',' << state.nodeReadCount << ','
+                  << state.sequentialLeafReadCount << ',' << meanSsdCost << ','
+                  << medianSsdCost << ','
+                  << meanTotalWithSsd << ',' << medianTotalWithSsd << ','
                   << state.tree->getSplitCount() << ','
                   << state.tree->getHeight() << ',' << state.tree->getNumNode()
                   << ',' << state.tree->getNumEntry() << ','
@@ -186,7 +224,13 @@ int runExperiment1() {
 
       std::cout << state.spec->name << " order=" << order
                 << " runs=" << state.executionTimes.size()
-                << " median_ms=" << medianMs << " mean_ms=" << meanMs
+                << " median_ms=" << med << " mean_ms=" << state.avg
+                << " node_reads=" << state.nodeReadCount
+                << " sequential_leaf_reads=" << state.sequentialLeafReadCount
+                << " ssd_median_ms=" << medianSsdCost
+                << " ssd_mean_ms=" << meanSsdCost
+                << " total_with_ssd_median_ms=" << medianTotalWithSsd
+                << " total_with_ssd_mean_ms=" << meanTotalWithSsd
                 << " rsd=" << state.rsd
                 << " splits=" << state.tree->getSplitCount()
                 << " height=" << state.tree->getHeight()

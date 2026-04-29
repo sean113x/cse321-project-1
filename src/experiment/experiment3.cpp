@@ -30,6 +30,14 @@ struct TreeSpec {
   int type;
 };
 
+struct Measurement {
+  double executionTimeMs = 0.0;
+  long long nodeReadCount = 0;
+  long long sequentialLeafReadCount = 0;
+  double simulatedSsdCostMs = 0.0;
+  double totalTimeWithSsdMs = 0.0;
+};
+
 struct QuerySpec {
   const char *name;
   int startKey;
@@ -38,7 +46,6 @@ struct QuerySpec {
 
 struct QueryResult {
   int rangeCount = 0;
-  int maleCount = 0;
   double avgGpa = 0.0;
   double avgHeight = 0.0;
 };
@@ -47,7 +54,11 @@ struct RunState {
   const TreeSpec *spec;
   std::unique_ptr<IndexTree> tree;
   std::vector<double> executionTimes;
+  std::vector<double> simulatedSsdCosts;
+  std::vector<double> totalTimesWithSsd;
   QueryResult result;
+  long long nodeReadCount = 0;
+  long long sequentialLeafReadCount = 0;
   double avg = 0.0;
   double sd = 0.0;
   double rsd = 0.0;
@@ -120,23 +131,36 @@ void calculateQueryResult(const std::vector<int> &rids, const Dataset &dataset,
   }
 
   result.rangeCount = static_cast<int>(rids.size());
-  result.maleCount = maleCount;
   result.avgGpa = maleCount == 0 ? 0.0 : gpaSum / maleCount;
   result.avgHeight = maleCount == 0 ? 0.0 : heightSum / maleCount;
 }
 
-long long runQueryBatch(IndexTree &tree, const QuerySpec &query,
-                        std::vector<int> &rids) {
+Measurement runQueryBatch(IndexTree &tree, const QuerySpec &query,
+                          const Dataset &dataset, int genderIndex,
+                          int gpaIndex, int heightIndex,
+                          std::vector<int> &rids, QueryResult &result) {
+  tree.resetNodeReadCount();
   auto start = std::chrono::steady_clock::now();
   for (int repeat = 0; repeat < queryRepeats; repeat++) {
     rids = tree.range_query(query.startKey, query.endKey);
+    calculateQueryResult(rids, dataset, genderIndex, gpaIndex, heightIndex,
+                         result);
   }
 
   auto end = std::chrono::steady_clock::now();
-  long long batchNs =
-      std::chrono::duration_cast<std::chrono::nanoseconds>(end - start)
-          .count();
-  return batchNs / queryRepeats;
+  Measurement measurement;
+  measurement.executionTimeMs =
+      std::chrono::duration<double, std::milli>(end - start).count() /
+      queryRepeats;
+  measurement.nodeReadCount = tree.getNodeReadCount() / queryRepeats;
+  measurement.sequentialLeafReadCount =
+      tree.getSequentialLeafReadCount() / queryRepeats;
+  measurement.simulatedSsdCostMs =
+      tree.getSimulatedSsdCostMs() / queryRepeats;
+  measurement.totalTimeWithSsdMs =
+      measurement.executionTimeMs + measurement.simulatedSsdCostMs;
+  tree.resetNodeReadCount();
+  return measurement;
 }
 } // namespace
 
@@ -165,13 +189,17 @@ int runExperiment3() {
   runFile << std::setprecision(12);
   summaryFile << std::setprecision(12);
 
-  runFile << "tree,order,query,start_key,end_key,run,execution_time_ns,"
-          << "range_count,male_count,avg_gpa,avg_height\n";
+  runFile << "tree,order,query,start_key,end_key,run,execution_time_ms,"
+          << "node_read_count,sequential_leaf_read_count,"
+          << "simulated_ssd_cost_ms,total_time_with_ssd_ms,"
+          << "range_count,avg_gpa,avg_height\n";
   summaryFile << "tree,order,query,start_key,end_key,records,warmup_runs,"
-              << "measured_runs,mean_execution_time_ns,"
-              << "median_execution_time_ns,stddev_execution_time_ns,rsd,"
-              << "mean_execution_time_ms,median_execution_time_ms,"
-              << "range_count,male_count,avg_gpa,avg_height,tree_height,"
+              << "measured_runs,mean_execution_time_ms,"
+              << "median_execution_time_ms,stddev_execution_time_ms,rsd,"
+              << "node_read_count,sequential_leaf_read_count,"
+              << "mean_simulated_ssd_cost_ms,median_simulated_ssd_cost_ms,"
+              << "mean_total_time_with_ssd_ms,median_total_time_with_ssd_ms,"
+              << "range_count,avg_gpa,avg_height,tree_height,"
               << "node_utilization\n";
 
   std::cout << "Experiment 3: Range Query Performance\n";
@@ -191,7 +219,9 @@ int runExperiment3() {
       for (int run = 0; run < warmupRuns; ++run) {
         for (RunState &state : states) {
           std::vector<int> rids;
-          runQueryBatch(*state.tree, query, rids);
+          QueryResult result;
+          runQueryBatch(*state.tree, query, dataset, genderIndex, gpaIndex,
+                        heightIndex, rids, result);
         }
       }
 
@@ -204,18 +234,26 @@ int runExperiment3() {
           }
 
           std::vector<int> rids;
-          long long ns = runQueryBatch(*state.tree, query, rids);
-          calculateQueryResult(rids, dataset, genderIndex, gpaIndex,
-                               heightIndex, state.result);
-          state.executionTimes.push_back(static_cast<double>(ns));
+          Measurement measurement =
+              runQueryBatch(*state.tree, query, dataset, genderIndex, gpaIndex,
+                            heightIndex, rids, state.result);
+          state.executionTimes.push_back(measurement.executionTimeMs);
+          state.nodeReadCount = measurement.nodeReadCount;
+          state.sequentialLeafReadCount = measurement.sequentialLeafReadCount;
+          state.simulatedSsdCosts.push_back(measurement.simulatedSsdCostMs);
+          state.totalTimesWithSsd.push_back(measurement.totalTimeWithSsdMs);
           state.avg = mean(state.executionTimes);
           state.sd = stddev(state.executionTimes, state.avg);
           state.rsd = state.sd / state.avg;
 
           runFile << state.spec->name << ',' << order << ',' << query.name
                   << ',' << query.startKey << ',' << query.endKey << ',' << run
-                  << ',' << ns << ',' << state.result.rangeCount << ','
-                  << state.result.maleCount << ',' << state.result.avgGpa << ','
+                  << ',' << measurement.executionTimeMs << ','
+                  << measurement.nodeReadCount << ','
+                  << measurement.sequentialLeafReadCount << ','
+                  << measurement.simulatedSsdCostMs << ','
+                  << measurement.totalTimeWithSsdMs << ','
+                  << state.result.rangeCount << ',' << state.result.avgGpa << ','
                   << state.result.avgHeight << '\n';
 
           if (run >= minMeasuredRuns && state.rsd < targetRsd) {
@@ -233,27 +271,37 @@ int runExperiment3() {
 
       for (const RunState &state : states) {
         double med = median(state.executionTimes);
-        double meanMs = state.avg / 1000000.0;
-        double medianMs = med / 1000000.0;
+        double meanSsdCost = mean(state.simulatedSsdCosts);
+        double medianSsdCost = median(state.simulatedSsdCosts);
+        double meanTotalWithSsd = mean(state.totalTimesWithSsd);
+        double medianTotalWithSsd = median(state.totalTimesWithSsd);
 
         summaryFile << state.spec->name << ',' << order << ',' << query.name
                     << ',' << query.startKey << ',' << query.endKey << ','
                     << keys.size() << ',' << warmupRuns << ','
                     << state.executionTimes.size() << ',' << state.avg << ','
                     << med << ',' << state.sd << ',' << state.rsd << ','
-                    << meanMs << ',' << medianMs << ','
-                    << state.result.rangeCount << ',' << state.result.maleCount
-                    << ',' << state.result.avgGpa << ','
+                    << state.nodeReadCount << ','
+                    << state.sequentialLeafReadCount << ',' << meanSsdCost << ','
+                    << medianSsdCost << ',' << meanTotalWithSsd << ','
+                    << medianTotalWithSsd << ','
+                    << state.result.rangeCount << ',' << state.result.avgGpa
+                    << ','
                     << state.result.avgHeight << ',' << state.tree->getHeight()
                     << ',' << state.tree->getNodeUtilization() << '\n';
 
         std::cout << state.spec->name << " order=" << order
                   << " query=" << query.name
                   << " runs=" << state.executionTimes.size()
-                  << " median_ms=" << medianMs << " mean_ms=" << meanMs
+                  << " median_ms=" << med << " mean_ms=" << state.avg
+                  << " node_reads=" << state.nodeReadCount
+                  << " sequential_leaf_reads=" << state.sequentialLeafReadCount
+                  << " ssd_median_ms=" << medianSsdCost
+                  << " ssd_mean_ms=" << meanSsdCost
+                  << " total_with_ssd_median_ms=" << medianTotalWithSsd
+                  << " total_with_ssd_mean_ms=" << meanTotalWithSsd
                   << " rsd=" << state.rsd
-                  << " range_count=" << state.result.rangeCount
-                  << " male_count=" << state.result.maleCount << '\n';
+                  << " range_count=" << state.result.rangeCount << '\n';
       }
     }
 

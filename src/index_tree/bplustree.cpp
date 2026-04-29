@@ -127,6 +127,9 @@ std::vector<int> BPlusTree::range_query(int startKey, int endKey) const {
     }
 
     leaf = leaf->next;
+    if (leaf != nullptr) {
+      countSequentialLeafRead();
+    }
     index = 0;
   }
 
@@ -147,6 +150,7 @@ void BPlusTree::insert(int key, int rid) {
 
   std::vector<std::pair<InternalNode *, int>> path;
   Node *current = root;
+  countNodeRead();
 
   while (!current->isLeaf) {
     auto *internal = static_cast<InternalNode *>(current);
@@ -159,6 +163,7 @@ void BPlusTree::insert(int key, int rid) {
 
     path.push_back({internal, index});
     current = internal->children[index];
+    countNodeRead();
   }
 
   auto *leaf = static_cast<LeafNode *>(current);
@@ -182,6 +187,7 @@ void BPlusTree::remove(int key) {
 
   std::vector<std::pair<InternalNode *, int>> path;
   Node *current = root;
+  countNodeRead();
 
   while (!current->isLeaf) {
     auto *internal = static_cast<InternalNode *>(current);
@@ -194,6 +200,7 @@ void BPlusTree::remove(int key) {
 
     path.push_back({internal, index});
     current = internal->children[index];
+    countNodeRead();
   }
 
   auto *leaf = static_cast<LeafNode *>(current);
@@ -255,6 +262,8 @@ std::pair<BPlusTree::LeafNode *, int> BPlusTree::search(Node *node,
   if (node == nullptr) {
     return {nullptr, -1};
   }
+
+  countNodeRead();
 
   if (node->isLeaf) { // It must reach to a leaf node.
     auto *leaf = static_cast<LeafNode *>(node);
@@ -446,6 +455,7 @@ void BPlusTree::handleUnderflow(
                         ? childIndex
                         : childIndex - 1;
 
+    countNodeRead();
     Node *left = parent->children[leftIndex];
     Node *right = parent->children[leftIndex + 1];
 
