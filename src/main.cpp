@@ -1,4 +1,5 @@
 #include "dataset_handler/dataset.h"
+#include "experiment/experiment1.h"
 #include "index_tree/bplustree.h"
 #include "index_tree/bstartree.h"
 #include "index_tree/btree.h"
@@ -64,6 +65,7 @@ int runTestMode() {
   std::cout << "Tree order = " << tree->getOrder() << '\n';
   std::cout << "Build time = " << buildMs << " ms\n";
   std::cout << "Split count = " << tree->getSplitCount() << '\n';
+  std::cout << "Tree height = " << tree->getHeight() << '\n';
   std::cout << "Number of nodes = " << tree->getNumNode() << '\n';
   std::cout << "Number of entries = " << tree->getNumEntry() << '\n';
   std::cout << "Node utilization = " << std::fixed << std::setprecision(2)
@@ -132,6 +134,29 @@ int runTestMode() {
   return 0;
 }
 
+int runExperimentMode() {
+  std::cout << "Experiments:\n";
+  std::cout << "  1. Insertion & Parameter Tuning\n";
+  std::cout << "  2. Point Search Performance (not implemented yet)\n";
+  std::cout << "  3. Range Query Performance (not implemented yet)\n";
+  std::cout << "  4. Deletion Performance (not implemented yet)\n";
+
+  std::string experiment = prompt("Select experiment", "1");
+
+  if (experiment == "1") {
+    return runExperiment1();
+  }
+
+  if (experiment == "2" || experiment == "3" || experiment == "4") {
+    std::cout << "Experiment " << experiment
+              << " is not implemented yet.\n";
+    return 0;
+  }
+
+  std::cout << "Unknown experiment: " << experiment << '\n';
+  return 0;
+}
+
 int main(int argc, char *argv[]) {
   try {
     if (argc < 2) {
@@ -140,8 +165,7 @@ int main(int argc, char *argv[]) {
 
     std::string mode = argv[1];
     if (mode == "experiment") {
-      std::cout << "Experiment mode is not implemented yet.\n";
-      return 0;
+      return runExperimentMode();
     }
 
     std::cout << "Usage: ./project1 [experiment]\n";

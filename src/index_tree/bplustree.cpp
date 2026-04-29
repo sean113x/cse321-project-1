@@ -55,6 +55,28 @@ int BPlusTree::search(int key) const {
   return -1;
 }
 
+int BPlusTree::calculateHeight() const {
+  int height = 0;
+  Node *current = root;
+
+  while (current != nullptr) {
+    height++;
+
+    if (current->isLeaf) {
+      break;
+    }
+
+    InternalNode *internal = static_cast<InternalNode *>(current);
+    if (internal->children.empty()) {
+      break;
+    }
+
+    current = internal->children[0];
+  }
+
+  return height;
+}
+
 std::vector<int> BPlusTree::range_query(int startKey, int endKey) const {
   std::vector<int> rids;
 

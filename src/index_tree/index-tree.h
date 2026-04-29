@@ -12,6 +12,7 @@ protected:
   int maxEntries() const { return order - 1; }
 
   virtual int minEntries() const = 0;
+  virtual int calculateHeight() const = 0;
 
 public:
   explicit IndexTree(int order)
@@ -31,6 +32,8 @@ public:
   int getNumNode() const { return numNode; }
 
   int getNumEntry() const { return numEntry; }
+
+  int getHeight() const { return calculateHeight(); }
 
   virtual double getNodeUtilization() const {
     if (numNode == 0) {

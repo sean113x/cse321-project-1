@@ -36,6 +36,23 @@ BStarTree::~BStarTree() {
 
 int BStarTree::search(int key) const { return search(root, key); }
 
+int BStarTree::calculateHeight() const {
+  int height = 0;
+  Node *current = root;
+
+  while (current != nullptr) {
+    height++;
+
+    if (current->isLeaf || current->children.empty()) {
+      break;
+    }
+
+    current = current->children[0];
+  }
+
+  return height;
+}
+
 std::vector<int> BStarTree::range_query(int startKey, int endKey) const {
   std::vector<int> rids;
 

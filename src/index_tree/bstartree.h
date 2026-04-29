@@ -24,6 +24,7 @@ private:
 
   // capacity helper function
   int minEntries() const override { return (2 * maxEntries()) / 3; }
+  int calculateHeight() const override;
 
   int rootMaxEntries() const { return 2 * minEntries(); }
 

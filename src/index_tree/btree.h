@@ -24,6 +24,7 @@ private:
 
   // capacity helper function
   int minEntries() const override { return (order + 1) / 2 - 1; }
+  int calculateHeight() const override;
 
   // search() helper functions
   int findIndex(const std::vector<Entry> &entries, int key) const;
