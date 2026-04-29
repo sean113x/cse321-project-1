@@ -24,7 +24,7 @@ namespace {
 constexpr int warmupRuns = 10;
 constexpr int minMeasuredRuns = 30;
 constexpr int maxRuns = 200;
-constexpr double targetRsd = 0.05;
+constexpr double targetRsd = 0.02;
 
 struct TreeSpec {
   const char *name;
