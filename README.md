@@ -4,7 +4,7 @@ This project implements and benchmarks index tree structures in C++.
 
 The project consists of the following main components:
 
-1. B-Tree, B\*-Tree, and B$^+$-Tree index implementations
+1. B-Tree, B\*-Tree, and B+tree index implementations
 2. Interactive index testing with search, range query, and delete operations
 3. Reproducible benchmark experiments with CSV result exports
 
@@ -20,7 +20,7 @@ The implemented index trees share a common `IndexTree` interface:
 
 - `BTree`: stores keys and record IDs in regular B-Tree nodes
 - `BStarTree`: uses B\*-Tree-style redistribution and 2-to-3 split logic to improve node utilization
-- `BPlusTree`: stores data entries in linked leaf nodes and keeps separator keys in internal nodes, following the B$^+$-Tree structure
+- `BPlusTree`: stores data entries in linked leaf nodes and keeps separator keys in internal nodes, following the B+tree structure
 
 The default dataset is `data/student.csv`, which contains 100,000 student records plus a header row. The first column, `Student ID`, is used as the index key, and each row position is used as its record ID (`RID`).
 
@@ -104,7 +104,7 @@ Then choose one of the built-in experiments:
 4. Deletion Performance
 ```
 
-Each experiment evaluates B-Tree, B\*-Tree, and B$^+$-Tree over the following tree orders:
+Each experiment evaluates B-Tree, B\*-Tree, and B+tree over the following tree orders:
 
 ```text
 3, 5, 10, 16, 32, 64, 128, 256, 512, 1024
@@ -192,7 +192,7 @@ Workloads:
 - `order`: maximum child capacity parameter used by the tree
 - `RID`: zero-based row index of a record in the loaded dataset
 - `node_read_count`: logical node reads counted during tree operations
-- `sequential_leaf_read_count`: sequential leaf reads counted during B$^+$-Tree-style range scans
+- `sequential_leaf_read_count`: sequential leaf reads counted during B+tree-style range scans
 - `simulated_ssd_cost_ms`: simulated storage-access cost
 - `total_time_with_ssd_ms`: measured execution time plus simulated SSD cost
 - `node_utilization`: percentage of occupied entries relative to node capacity
