@@ -148,7 +148,7 @@ Measurement searchTree(IndexTree &tree, const std::vector<int> &queries,
 int runExperiment2() {
   const std::vector<TreeSpec> trees = {
       {"btree", 1}, {"bstar", 2}, {"bplus", 3}};
-  const std::vector<int> orders = {3, 5, 10, 16, 32, 64, 128, 256, 512, 1024};
+  const std::vector<int> orders = {3, 5, 10, 20, 50, 100};
 
   Dataset dataset = loadDataset("data/student.csv");
   std::vector<int> keys;

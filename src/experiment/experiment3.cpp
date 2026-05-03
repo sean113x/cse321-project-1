@@ -167,7 +167,7 @@ Measurement runQueryBatch(IndexTree &tree, const QuerySpec &query,
 int runExperiment3() {
   const std::vector<TreeSpec> trees = {
       {"btree", 1}, {"bstar", 2}, {"bplus", 3}};
-  const std::vector<int> orders = {3, 5, 10, 16, 32, 64, 128, 256, 512, 1024};
+  const std::vector<int> orders = {3, 5, 10, 20, 50, 100};
   const std::vector<QuerySpec> queries = {
       {"id_202000000_202100000", 202000000, 202100000},
       {"id_202000000_202600000", 202000000, 202600000}};
